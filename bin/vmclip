@@ -1,0 +1,6 @@
+#!/bin/sh
+#info: Copy clipboard to VM without clipboard enabled in VM
+sleep 3
+xdotool type "$(xclip -o -selection clipboard)"
+
+# todo: https://github.com/POMATu/xdotool-type-clipboard/blob/master/xdotool-type-clipboard

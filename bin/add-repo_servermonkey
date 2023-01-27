@@ -1,0 +1,67 @@
+#!/bin/sh
+#info: Add APT repo muspekaren.se/repo-debian to sources.list.d
+#info: , same as Ansible task: servermonkey.ww.cfg_apt-servermonkey
+# shellcheck disable=SC2039
+
+error() {
+	echo "ERROR: $1"
+	exit 1
+}
+
+# must run as root
+if [ "$(id -u)" -ne 0 ]; then
+	error 'This script must be run as root!' >&2
+fi
+
+# requirements
+echo "Install packages gpg and wget"
+apt-get install gpg wget -yqq
+command -v gpg 1>/dev/null || error "Failed to install gpg"
+command -v wget 1>/dev/null || error "Failed to install wget"
+
+add_repo() {
+	local REPO="$1"
+	local KEY_FILE="$2"
+	local KEY_SHA256="$3"
+	local SRC_LIST="$4"
+
+	INSTALL_TMP=$(mktemp -d) || error "Failed mktemp"
+	cd "$INSTALL_TMP" || error "cd"
+
+	local KEY_DES="/usr/share/keyrings/$KEY_FILE"
+
+	if [ -f "$KEY_DES" ]; then
+		echo "Skipping, key is already in keyring: $KEY_DES"
+	else
+		echo "Download, verify and add repo key"
+		wget -q "$REPO/KEY.gpg" -O "$KEY_FILE" || error "key download failed"
+		# verify key
+		echo "$KEY_SHA256 $KEY_FILE" | sha256sum --check --status ||
+			error "SHA256 failed for $KEY_FILE"
+		# add key to chain
+		gpg --dearmor <"$KEY_FILE" | tee "$KEY_DES" >/dev/null
+		rm "$KEY_FILE"
+	fi
+
+	if [ -f "$SRC_LIST" ]; then
+		echo "Skipping, repo is already in source list: $SRC_LIST"
+	else
+		echo "Add APT repo"
+		echo "deb [signed-by=$KEY_DES] $REPO ./" >"$SRC_LIST"
+		chmod 644 "$SRC_LIST" || error "chmod $SRC_LIST"
+	fi
+
+	cd "$HOME" || error "cd HOME"
+}
+
+# add ServerMonkey's repo
+REPO="https://muspekaren.se/repo-debian"
+KEY_FILE="repo-dev_at_muspekaren.se.gpg"
+KEY_SHA256="9975c15801b538f65717e70876341fb3e328354685895864fdc01745cdd531cc"
+SRC_LIST="/etc/apt/sources.list.d/muspekaren_se_repo_debian.list"
+add_repo "$REPO" "$KEY_FILE" "$KEY_SHA256" "$SRC_LIST"
+
+# update and verify
+apt-get update -qq || error "apt update"
+
+echo "Done!"

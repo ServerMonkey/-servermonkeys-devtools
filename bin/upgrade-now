@@ -1,0 +1,9 @@
+#!/bin/sh
+#info: Same as 'apt update and upgrade', also updates fastpkg if installed
+sudo apt -qq update && sudo apt upgrade -y
+
+# if fastpkg is installed also update
+if [ -n "$(command -v fastpkg)" ]; then
+	echo "Updating fastpkg"
+	sudo fastpkg -qb update
+fi

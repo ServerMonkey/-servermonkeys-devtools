@@ -1,0 +1,3 @@
+#!/bin/sh
+#info: List all packages from the local apt repo
+grep '^Package:' "/var/lib/apt/lists/_var_lib_local-apt-repository_._Packages" | sed 's/Package: //g'

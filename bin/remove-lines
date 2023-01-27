@@ -1,0 +1,18 @@
+#!/usr/bin/env python3
+# Remove lines from a file that are in another file
+
+import sys
+
+file_input = sys.argv[1]  # the file that you want to remove the lines from
+file_removelist = sys.argv[2]  # a list of lines that will be removed from file_input
+
+with open(file_removelist, 'r+') as source:
+    filter_lines = source.readlines()
+
+with open(file_input, 'r') as f:
+    lines = f.readlines()
+
+with open(file_input, 'w') as target:
+    for line in lines:
+        if line not in filter_lines:
+            target.write(line)

@@ -1,0 +1,90 @@
+#!/bin/sh
+#info: Upload a fastpkg repo to a sftp-only server, uses the 'pass' tool
+
+fail_if_undefined() {
+	if [ -z "$1" ]; then
+		echo "error, variable '$2' is unset or empty, run export before."
+		echo "Example: export $2=\"my_data_here\""
+		exit 1
+	fi
+}
+
+require_app() {
+	if [ -z "$(command -v "$1")" ]; then
+		echo "$1 not installed. Install to make this script work."
+		exit 1
+	fi
+}
+
+error() {
+	echo "error, aborting"
+	exit 1
+}
+
+### MAIN ######################################################################
+
+# verify
+fail_if_undefined "$MRSU_SRC" "MRSU_SRC"
+fail_if_undefined "$MRSU_USER" "MRSU_USER"
+fail_if_undefined "$MRSU_SERVER" "MRSU_SERVER"
+fail_if_undefined "$MRSU_PASS_PATH" "MRSU_PASS_PATH"
+require_app dir2html
+require_app pass
+require_app sshpass
+
+# verify source folder
+if [ ! -d "$MRSU_SRC" ]; then
+	echo "$MRSU_SRC does not exist or not a folder"
+	exit 1
+fi
+
+# change to workdir
+cd "$MRSU_SRC" || error
+
+# copy fastpkg repo if it exists
+if [ -n "$MRSU_FASTPKG" ]; then
+	if [ ! -f "$MRSU_FASTPKG" ]; then
+		echo "$MRSU_FASTPKG does not exist or is not a file"
+		exit 1
+	fi
+	cp "$MRSU_FASTPKG" packages.csv || error
+	# always create and index for fastpkg
+	echo "Creating index.html for fastpkg"
+	dir2html "fastpkg repo" || error
+# create index if there is none
+else
+	if [ ! -f "index.html" ] ||
+		[ ! -f "index.htm" ] ||
+		[ ! -f "index.php" ]; then
+		# looks like a debian repo
+		if [ -f "Packages" ] && [ -f "Release" ]; then
+			echo "Creating index.html for Debian"
+			dir2html "debian repo" || error
+		# unknown repo
+		else
+			echo "Creating index.html for generic repo"
+			dir2html "repo" || error
+		fi
+	fi
+fi
+
+# get sftp password
+SSHPASS=$(pass show "$MRSU_PASS_PATH") || error
+export SSHPASS
+
+# create temp batch script
+BATCH_FILE=$(mktemp) || error
+#todo: replace with lftp
+BASE_PATH=$(basename "$MRSU_SRC")
+echo "rm $BASE_PATH/*
+put -R $MRSU_SRC/ .
+bye" >"$BATCH_FILE"
+
+# upload files
+sshpass -v -e sftp -oBatchMode=no -b "$BATCH_FILE" \
+	"$MRSU_USER@$MRSU_SERVER" || error
+
+# remove temp file
+rm -f "$BATCH_FILE"
+
+echo "Done"

@@ -1,0 +1,176 @@
+#!/bin/sh
+#info: Convert oldversion.com .tar archive to a fastpkg repo
+# Example: https://archive.org/details/oldversion.com-windows-2019-10-01
+
+set -e
+
+# help
+if [ -z "$1" ] || [ "$1" = "-h" ] || [ "$1" = "--help" ]; then
+    echo "Convert oldversion.com .tar archive to a fastpkg repo"
+    echo "Example:"
+    echo "  oldversion2fastpkg ./oldver/ ./packages.csv http://example.org/"
+    echo ""
+    echo "SCRIPT parameter can automatically be added by creating a file"
+    echo "named 'packages_args.txt' in the source folder."
+    echo "Each line represents a custom argument for each program."
+    echo "Line format: <PROGRAM_NAME>==<ARGS>"
+    echo ""
+    echo "Example file:"
+    echo "  mozilla-firefox==-ms -ma"
+    echo "  audacity==/VERYSILENT /SUPPRESSMSGBOXES /NORESTART /SP-"
+    echo ""
+    echo "BUG: Do not use commas as arguments"
+    exit 0
+fi
+
+SRC_FOLDER="$1"
+FILE_FASTPKG="$2"
+URL_BASE="$3"
+
+if [ -z "$SRC_FOLDER" ]; then
+    echo "SRC_FOLDER can not be empty, e.g.: ./oldversion/"
+    exit 1
+fi
+if [ -z "$FILE_FASTPKG" ]; then
+    echo "FILE_FASTPKG can not be empty, e.g.: ./packages.csv"
+    exit 1
+fi
+if [ -z "$URL_BASE" ]; then
+    echo "URL_BASE can not be empty, e.g.: http://mywebsite/"
+    exit 1
+fi
+
+cd "$SRC_FOLDER" || exit 1
+
+# write header
+echo "NAME,VERSION,EXTENSION,INSTALLER,SCRIPT,DESCRIPTION,SHA256,SOURCE" \
+    >"$FILE_FASTPKG"
+echo "" >>"$FILE_FASTPKG"
+
+# find categories from folders and tar files
+LIST_CATEGORIES_FOLDERS=$(find . -maxdepth 1 -type d -not -name '.*')
+LIST_CATEGORIES_TAR=$(find . -maxdepth 1 -type f -name '*.tar' |
+    sed 's|.tar||g')
+LIST_CATEGORIES=$(printf "%s\n%s" \
+    "$LIST_CATEGORIES_FOLDERS" "$LIST_CATEGORIES_TAR" | sort -u)
+
+# remove empty folders and useless files
+for j in $LIST_CATEGORIES; do
+    # remove useless files
+    find "$j" -type f -name '*.xml' -exec rm {} \;
+    find "$j" -type d -empty -exec rmdir {} \;
+    find "$j" -type d -empty -exec rmdir {} \;
+    find "$j" -type d -empty -exec rmdir {} \;
+done
+
+FILE_APP_LIST="app_list.txt"
+FILE_APP_LIST_FULL="app_list_full.txt"
+FILE_APP_LIST_TMP="app_list.tmp"
+FILE_APP_LIST_FULL_TMP="app_list_full.tmp"
+
+touch "$FILE_APP_LIST_TMP" "$FILE_APP_LIST_FULL_TMP"
+rm -f "$FILE_APP_LIST" "$FILE_APP_LIST_FULL"
+
+# for each category
+for i in $LIST_CATEGORIES; do
+    CATEGORIE=$(basename "$i")
+    if ! [ -d "$CATEGORIE" ]; then
+        echo "$CATEGORIE: extracting"
+        tar xvf "$i.tar" || exit 1
+        rm "$i.tar"
+    else
+        echo "$CATEGORIE: already extracted"
+    fi
+
+    # for each application
+    echo "# $CATEGORIE" >>"$FILE_FASTPKG"
+    for APP_PATH in "$CATEGORIE"/*; do
+        [ -e "$APP_PATH" ] || continue
+        APP=$(basename "$APP_PATH" | tr '[:upper:]' '[:lower:]')
+
+        # find individual package
+        for APP_PATH_VERSION in "$APP_PATH"/*; do
+            [ -e "$APP_PATH_VERSION" ] || continue
+            echo "$CATEGORIE: $APP_SUB"
+
+            APP_SUB="$(basename "$APP_PATH_VERSION" |
+                tr '[:upper:]' '[:lower:]')"
+
+            # SOURCE
+            PATH_BIN=$(find "$APP_PATH_VERSION" -type f -not -name '*.sha256' |
+                head -n1)
+
+            # VERSION
+            VER="$(echo "$APP_SUB" | sed "s|$APP||g" |
+                sed "s|-|.|g" | sed 's/^[.]*//g' | sed 's/[.]*$//g')"
+
+            # EXTENSION
+            EXT=$(echo "${PATH_BIN##*.}" | tr '[:upper:]' '[:lower:]')
+
+            # INSTALLER
+            case $EXT in
+            exe | msi | zip | 7z | rar | air | com)
+                INS=winapp
+                ;;
+            iso | dmg)
+                INS=disk
+                ;;
+            xpi)
+                INS=firefox-ext
+                ;;
+            jar)
+                INS=java
+                ;;
+            *)
+                echo "ERROR: Unknown file extension: $PATH_BIN"
+                exit 1
+                ;;
+            esac
+
+            # SCRIPT
+            SCR=""
+            SRC_ARG="$(grep "$APP" <"packages_args.txt" |
+                awk -F "==" '{print $2}')"
+            if [ -n "$SRC_ARG" ]; then
+                SCR="ARGS: $SRC_ARG"
+            fi
+
+            # DESCRIPTION
+            DES="Software type - $CATEGORIE"
+
+            # SHA256
+            FILE_HASH="$PATH_BIN.sha256"
+            if [ -f "$FILE_HASH" ]; then
+                SHA=$(cat "$FILE_HASH")
+            else
+                SHA=$(sha256sum "$PATH_BIN" | awk '{print $1}')
+                echo "$SHA" >"$FILE_HASH"
+            fi
+
+            # SOURCE
+            SRC="$URL_BASE$(echo "$PATH_BIN" | sed "s|\./||g")"
+
+            if [ -n "$PATH_BIN" ] && [ -n "$VER" ]; then
+                # add to CSV
+                echo "$APP,$VER,$EXT,$INS,$SCR,$DES,$SHA,$SRC" \
+                    >>"$FILE_FASTPKG"
+                # create index
+                if ! grep -qxF "$APP" <"$FILE_APP_LIST_TMP"; then
+                    echo "$APP" >>"$FILE_APP_LIST_TMP"
+                fi
+                echo "$APP $VER" >>"$FILE_APP_LIST_FULL_TMP"
+            else
+                SKIP=$(printf "%s\n%s" "$SKIP" "$PATH_BIN")
+            fi
+        done
+    done
+    echo "" >>"$FILE_FASTPKG"
+    echo "Skipped: $SKIP"
+
+done
+
+# sort app lists
+sort -o "$FILE_APP_LIST" "$FILE_APP_LIST_TMP"
+sort -o "$FILE_APP_LIST_FULL" "$FILE_APP_LIST_FULL_TMP"
+rm -f "$FILE_APP_LIST_TMP"
+rm -f "$FILE_APP_LIST_FULL_TMP"

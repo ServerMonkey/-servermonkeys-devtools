@@ -51,40 +51,29 @@ if [ -n "$MRSU_FASTPKG" ]; then
 	# always create and index for fastpkg
 	echo "Creating index.html for fastpkg"
 	dir2html "fastpkg repo" || error
-# create index if there is none
+# create a HTML index
 else
-	if [ ! -f "index.html" ] ||
-		[ ! -f "index.htm" ] ||
-		[ ! -f "index.php" ]; then
-		# looks like a debian repo
-		if [ -f "Packages" ] && [ -f "Release" ]; then
-			echo "Creating index.html for Debian"
-			dir2html "debian repo" || error
-		# unknown repo
-		else
-			echo "Creating index.html for generic repo"
-			dir2html "repo" || error
-		fi
+	# looks like a debian repo
+	if [ -f "Packages" ] && [ -f "Release" ]; then
+		echo "Creating index.html for Debian"
+		dir2html "debian repo" || error
+	# unknown repo
+	else
+		echo "Creating index.html for generic repo"
+		dir2html "repo" || error
 	fi
 fi
 
 # get sftp password
-SSHPASS=$(pass show "$MRSU_PASS_PATH") || error
-export SSHPASS
+LFTP_PASSWORD=$(pass show "$MRSU_PASS_PATH") || error
 
-# create temp batch script
-BATCH_FILE=$(mktemp) || error
-#todo: replace with lftp
-BASE_PATH=$(basename "$MRSU_SRC")
-echo "rm $BASE_PATH/*
-put -R $MRSU_SRC/ .
-bye" >"$BATCH_FILE"
+# LFTP_PASSWORD is a custom env variable read by lftp
+export LFTP_PASSWORD
 
-# upload files
-sshpass -v -e sftp -oBatchMode=no -b "$BATCH_FILE" \
-	"$MRSU_USER@$MRSU_SERVER" || error
+lftp --env-password "sftp://$MRSU_USER@$MRSU_SERVER" -e \
+	"mirror --reverse --only-newer $MRSU_SRC $BASE_PATH; bye" || error
 
-# remove temp file
-rm -f "$BATCH_FILE"
+# Destroy password after use
+export LFTP_PASSWORD=""
 
 echo "Done"

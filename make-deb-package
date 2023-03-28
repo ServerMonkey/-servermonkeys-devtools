@@ -35,8 +35,8 @@ rm -rf "$PATH_BASE"
 echo "Copying relevant source files"
 mkdir -p "$PATH_SHARE" "$PATH_BIN" "$PATH_MAN"
 cp -t "$PATH_SHARE" "README.md" "copyright" || exit 1
-rsync -rLv "./share/" "$PATH_SHARE" || exit 1
-find "$PATH_SHARE" -type f -exec chmod 0644 {} +
+#rsync -rLv "./share/" "$PATH_SHARE" || exit 1
+#find "$PATH_SHARE" -type f -exec chmod 0644 {} +
 rsync -rLv "./bin/" "$PATH_BIN" || exit 1
 find "$PATH_BIN" -type f -exec chmod 0755 {} +
 
@@ -56,6 +56,8 @@ Architecture: all
 Depends: xdotool,
  xclip,
  monkeyrepo,
+ ansible2deb,
+ ccze-test,
  tree (>= 1.8),
  pass (>= 1.7),
  sshpass (>= 1),
@@ -63,7 +65,8 @@ Depends: xdotool,
  fakeroot (>= 1),
  zip (>= 3),
  lintian (>= 2),
- rsync (>= 3)
+ rsync (>= 3),
+ lftp
 Maintainer: Bodo Endres <dev@muspekaren.se>
 Description: $DESCRIPTION
 " >"$PATH_TARGET/control"

@@ -24,6 +24,7 @@ PATH_BASE="./$RELEASES/$NAME-$VERSION"
 PATH_INSTALL="$PATH_BASE/usr/local"
 PATH_BIN="$PATH_INSTALL/bin"
 PATH_SHARE="$PATH_INSTALL/share/$NAME"
+PATH_DOCS="$PATH_SHARE/docs"
 PATH_TARGET="$PATH_BASE/$TARGET"
 PATH_MAN="$PATH_INSTALL/share/man/man$MAN_PAGE"
 
@@ -33,9 +34,9 @@ rm -rf "$PATH_BASE"
 
 # copy relevant files from source to release
 echo "Copying relevant source files"
-mkdir -p "$PATH_SHARE" "$PATH_BIN" "$PATH_MAN"
+mkdir -p "$PATH_SHARE" "$PATH_BIN" "$PATH_MAN" "$PATH_DOCS"
 cp -t "$PATH_SHARE" "README.md" "copyright" || exit 1
-#rsync -rLv "./share/" "$PATH_SHARE" || exit 1
+rsync -rLv "./docs/" "$PATH_DOCS" || exit 1
 #find "$PATH_SHARE" -type f -exec chmod 0644 {} +
 rsync -rLv "./bin/" "$PATH_BIN" || exit 1
 find "$PATH_BIN" -type f -exec chmod 0755 {} +
@@ -66,6 +67,7 @@ Depends: xdotool,
  zip (>= 3),
  lintian (>= 2),
  rsync (>= 3),
+ img2pdf (>= 0.4),
  lftp
 Maintainer: Bodo Endres <dev@muspekaren.se>
 Description: $DESCRIPTION

@@ -1,0 +1,64 @@
+#!/bin/sh
+#info: CinaC unattended installer example
+# This will configure APT repos and install CinaC silently
+#
+# Install from USB-stick:
+#   Copy this file to a USB root, then run on target host:
+#   sudo mount /dev/sd<REPLACE>1 /media/cdrom && /media/cdrom/setup-cinac-unattended
+#
+# Install via wget:
+#   wget https://raw.githubusercontent.com/ServerMonkey/servermonkeys-devtools/main/bin/setup-cinac-unattended
+#   sudo sh setup-cinac-unattended
+
+# must run as normal user
+if [ "$(id -u)" = 0 ]; then
+    echo 'This script must be run as a normal user, not root!' >&2
+    exit 1
+fi
+
+# verify OS
+if ! lsb_release -c | grep -q bullseye; then
+    echo "This OS is not Debian 11 Bullseye"
+    exit 1
+fi
+
+# test internet
+if ! ping -c1 github.com -q; then
+    echo "Failed to reach github.com"
+    exit 1
+fi
+if ! ping -c1 muspekaren.se -q; then
+    echo "Failed to reach muspekaren.se"
+    exit 1
+fi
+
+# base APT install
+# also enable proposed-updates, better compatibility with newer laptops
+echo "# BEGIN - cfg_apt
+deb http://deb.debian.org/debian bullseye main contrib non-free
+deb http://deb.debian.org/debian-security/ bullseye-security main contrib non-free
+deb http://deb.debian.org/debian bullseye-updates main contrib non-free
+deb http://deb.debian.org/debian bullseye-proposed-updates main contrib non-free
+# END" | sudo tee /etc/apt/sources.list 1>/dev/null
+sudo apt -qq update || exit 1
+sudo apt upgrade -y || exit 1
+
+# add ServerMonkeys APT repo
+cd /tmp &&
+    wget https://raw.githubusercontent.com/ServerMonkey/servermonkeys-devtools/main/bin/add-repo_servermonkey \
+        -qO /tmp/add-repo_servermonkey &&
+    echo "e5b0c63911840ca80d0db84b03f4ed7ea49c396bcd9b92fc53f7b3ea42b78d90 add-repo_servermonkey" |
+    sha256sum -c && sudo sh add-repo_servermonkey
+rm -f /tmp/add-repo_servermonkey
+
+# install cinac
+sudo apt-get install -qy cinac autokiosk || exit 1
+
+# init cinac
+export CINAC_PYARG=true
+export CINAC_GPGAGENT=merge
+export CINAC_KEY=existing
+export CINAC_MAIL=cinac@localhost
+export CINAC_NAME=CinaC
+export CINAC_PASSWORD=""
+cinac-init

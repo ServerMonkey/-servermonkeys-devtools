@@ -17,9 +17,16 @@ Also some wine and virtualization related tools.
 * `oldversion2fastpkg <SRC> <DES> <URL_PREFIX>` : Convert oldversion.com .tar archive to a fastpkg repo
 * `remove-lines <TARGET_FILE> <FILE_WITH_LIST_OF_LINES>` : Remove lines from a
   file that are in another file
+* `setup-cinac-unattended` : CinaC unattended installer example
 * `upgrade-now` : Same as 'apt update and upgrade', also updates fastpkg if
   installed
 * `vmclip` : Copy clipboard to VM without clipboard enabled in VM
+
+## LIST OF DOCUMENTS
+
+* `dictionary` : Servermonkeys IT-dictionary for dummies
+* `software-philosophy` : Servermonkeys software philosophy
+* `ventoy` : Ventoy with Debian Preseed and fastpkg
 
 ## COPYRIGHT
 

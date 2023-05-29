@@ -40,8 +40,8 @@ deb http://deb.debian.org/debian-security/ bullseye-security main contrib non-fr
 deb http://deb.debian.org/debian bullseye-updates main contrib non-free
 deb http://deb.debian.org/debian bullseye-proposed-updates main contrib non-free
 # END" | sudo tee /etc/apt/sources.list 1>/dev/null
-sudo apt -qq update || exit 1
-sudo apt upgrade -y || exit 1
+sudo apt-get -qq update || exit 1
+sudo apt-get upgrade -y || exit 1
 
 # add ServerMonkeys APT repo
 cd /tmp &&
@@ -52,7 +52,7 @@ cd /tmp &&
 rm -f /tmp/add-repo_servermonkey
 
 # install cinac
-sudo apt-get install -qy cinac autokiosk || exit 1
+sudo apt-get install -qy cinac || exit 1
 
 # init cinac
 export CINAC_PYARG=true

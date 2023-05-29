@@ -1,6 +1,6 @@
 #!/bin/sh
 #info: Convert oldversion.com .tar archive to a fastpkg repo
-# Example: https://archive.org/details/oldversion.com-windows-2019-10-01
+# Example Torrent: https://archive.org/download/oldversion.com-windows-2019-10-01/oldversion.com-windows-2019-10-01_archive.torrent
 
 set -e
 

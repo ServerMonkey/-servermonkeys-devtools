@@ -47,7 +47,13 @@ if [ -n "$MRSU_FASTPKG" ]; then
 		echo "$MRSU_FASTPKG does not exist or is not a file"
 		exit 1
 	fi
-	cp "$MRSU_FASTPKG" packages.csv || error
+	PACKAGES_SRC=$(realpath "$MRSU_FASTPKG")
+	PACKAGES_DST=$(realpath "$MRSU_SRC/packages.csv")
+	if [ "$PACKAGES_SRC" = "$PACKAGES_DST" ]; then
+		echo "skip copy, packages.csv exists"
+	else
+		cp "$MRSU_FASTPKG" packages.csv || error
+	fi
 	# always create and index for fastpkg
 	echo "Creating index.html for fastpkg"
 	dir2html "fastpkg repo" || error

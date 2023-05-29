@@ -1,0 +1,56 @@
+#!/bin/sh
+
+# help
+if [ -z "$1" ] || [ "$1" = "-h" ] || [ "$1" = "--help" ]; then
+	echo "Convert a directory of zip files to a fastpkg packages repo file"
+	echo "Usage:"
+	echo "  websitedownloader2fastpkg <DIR_IN> <FILE_OUT> <WWW_ROOT>"
+	echo "FILE_OUT without the .csv extension"
+	echo ""
+	echo "Example use:"
+	echo "  websitedownloader2fastpkg ~/webrips ~/repo/packages https://example.com"
+	exit 0
+fi
+
+DIR_IN="$1"
+FILE_OUT="$2"
+WWW_ROOT="$3"
+
+if [ -z "$DIR_IN" ]; then
+	echo "DIR_IN is unset"
+	exit 1
+fi
+if [ -z "$FILE_OUT" ]; then
+	echo "FILE_OUT is unset"
+	exit 1
+fi
+if [ -z "$WWW_ROOT" ]; then
+	echo "WWW_ROOT is unset"
+	exit 1
+fi
+
+FILES=$(find "$DIR_IN" -name "*.zip" -printf '%P\n')
+
+if [ -z "$FILES" ]; then
+	echo "No files found in $DIR_IN"
+	exit 1
+fi
+
+rm -f "$FILE_OUT.csv"
+
+fastpkg-template "$FILE_OUT" || exit 1
+
+for i in $FILES; do
+	PKG_BASE=$(basename "$i")
+	PKG_NME_FULL=$(echo "$PKG_BASE" | awk -F'_' '{print $1}')
+	echo "package: $PKG_NME_FULL"
+	PKG_NME=$(echo "webrip-""$PKG_NME_FULL" | tr '.' '-')
+	PKG_VER=$(echo "$PKG_BASE" | awk -F'_' '{print $2}' | awk -F'.' '{print $1}')
+	PKG_EXT=$(echo "$PKG_BASE" | awk -F . '{if (NF>1) {print $NF}}')
+	PKG_INS="web"
+	PKG_SCR=""
+	PKG_DES="Website rip of $PKG_NME_FULL"
+	PKG_256=$(sha256sum "$DIR_IN/$i" | awk '{print $1}')
+	PKG_SRC="$WWW_ROOT/$i"
+	echo "$PKG_NME,$PKG_VER,$PKG_EXT,$PKG_INS,$PKG_SCR,$PKG_DES,$PKG_256,$PKG_SRC" >>"$FILE_OUT.csv"
+done

@@ -4,9 +4,10 @@ servermonkeys-devtools(1) -- Servermonkeys Development tools
 ## DESCRIPTION
 
 Just a bunch of tools I use to develop Debian and fastpkg packages.  
-Also some wine and virtualization related tools.
 
 ## LIST OF TOOLS
+
+This is a collection of programs and scripts. After installing this as APT package you can just run each program directly from your shell. Most of them support a '-h' option for additional help.
 
 * `add-repo_servermonkey` : Add APT repo muspekaren.se/repo-debian to
   sources.list.d, same as Ansible task: servermonkey.ww.cfg_apt-servermonkey
@@ -31,7 +32,7 @@ Also some wine and virtualization related tools.
 
 * `dictionary` : Servermonkeys IT-dictionary for dummies
 * `software-philosophy` : Servermonkeys software philosophy
-* `ventoy` : Ventoy with Debian Preseed and fastpkg
+* `windows-isos` : Note on Microsoft Windows ISO files
 
 ## COPYRIGHT
 

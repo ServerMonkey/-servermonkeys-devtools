@@ -1,5 +1,7 @@
 #!/bin/sh
 #info: Create a simple HTML index from current directory
+# To change the title of the index, pass it as first argument
+
 TITLE="$1"
 tree -H '.' -L 1 --noreport --dirsfirst -T "$TITLE" -s -D --charset utf-8 |
 	sed 's:├── ::g' | sed 's:└── ::g' |

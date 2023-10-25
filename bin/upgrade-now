@@ -2,8 +2,15 @@
 #info: Same as 'apt update and upgrade', also updates fastpkg if installed
 sudo apt -qq update && sudo apt upgrade -y
 
-# if fastpkg is installed also update
+# fastpkg
 if [ -n "$(command -v fastpkg)" ]; then
-	echo "Updating fastpkg"
-	sudo fastpkg -qb update
+    echo "Updating fastpkg"
+    sudo fastpkg -qb update
+fi
+
+# flatpak
+if [ -n "$(command -v flatpak)" ]; then
+    echo "Updating flatpak"
+    flatpak upgrade -y
+    flatpak uninstall --unused -y
 fi

@@ -1,0 +1,9 @@
+#!/bin/sh
+#info: Recursively change file and folder permissions to default
+
+TARGET="$1"
+# if target is empty abort and show help
+[ -z "$TARGET" ] && echo "Usage: $0 <target>" && exit 1
+
+find "$TARGET" -type d -exec chmod 755 {} + || exit 1
+find "$TARGET" -type f -exec chmod 644 {} + || exit 1

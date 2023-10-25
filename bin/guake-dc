@@ -1,0 +1,33 @@
+#!/bin/sh
+# info: Opens a new guake tab in the current directory
+# Use it in DoubleCommander as terminal
+
+set -e
+
+error() {
+    echo "ERROR: $1" >&2
+    notify-send "guake-dc Error: $1" || true
+    exit 1
+}
+
+ARGS="$*"
+
+command -v guake >/dev/null 2>&1 || error "guake is not installed"
+
+if [ -z "$ARGS" ]; then
+    echo "No arguments given, using current directory"
+    TARGET="$PWD"
+elif [ -d "$ARGS" ]; then
+    echo "Opening directory $ARGS"
+    TARGET="$ARGS"
+elif [ -f "$ARGS" ]; then
+    echo "Opening directory of file $ARGS"
+    TARGET=$(dirname "$ARGS")
+else
+    error "guake-dc: Folder $ARGS does not exist"
+fi
+
+[ -n "$TARGET" ] || error "TARGET variable is empty"
+
+guake --new-tab="$TARGET" || error "Failed to open guake tab: $TARGET"
+guake-toggle || error "Failed to toggle guake"

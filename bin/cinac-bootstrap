@@ -142,4 +142,4 @@ echo "Installing CinaC"
 apt-get install "$CB_PKGS" -y || error "Failed to install CinaC"
 
 echo ""
-echo "Installation complete, please run 'cinac-init' and reboot"
+echo "Installation complete, please reboot then run 'cinac-init'"

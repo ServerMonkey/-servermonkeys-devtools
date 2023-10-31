@@ -7,60 +7,60 @@ set -e
 
 # help
 if [ "$1" = "-h" ] || [ "$1" = "--help" ]; then
-	echo "This deploys all CinaC Demo Blueprints in a VM"
-	echo "Custom .deb packages will be copied from /srv/local-apt-repository/"
-	echo "to the VM."
-	echo "Before use you must define the BP_DIR folder, which contains the"
-	echo "you want to test"
-	echo ""
-	echo "Example use:"
-	echo "   export BP_DIR=/home/user/cinac/demo-blueprints"
-	echo "First time unit test:"
-	echo "   cinac-unittest"
-	echo "Update an existing unit test:"
-	echo "   cinac-unittest u"
-	echo "Skip fastpkg hash verification, much faster:"
-	echo "   cinac-unittest s"
-	echo "Together:"
-	echo "   cinac-unittest us"
-	echo "When done, erase the VM and inventory:"
-	echo "   cinac-unittest e"
-	exit 0
+    echo "This deploys all CinaC Demo Blueprints in a VM"
+    echo "Custom .deb packages will be copied from /srv/local-apt-repository/"
+    echo "to the VM."
+    echo "Before use you must define the BP_DIR folder, which contains the"
+    echo "you want to test"
+    echo ""
+    echo "Example use:"
+    echo "   export BP_DIR=/home/user/cinac/demo-blueprints"
+    echo "First time unit test:"
+    echo "   cinac-unittest"
+    echo "Update an existing unit test:"
+    echo "   cinac-unittest u"
+    echo "Skip fastpkg hash verification, much faster:"
+    echo "   cinac-unittest s"
+    echo "Together:"
+    echo "   cinac-unittest us"
+    echo "When done, erase the VM and inventory:"
+    echo "   cinac-unittest e"
+    exit 0
 fi
 
 if echo "$1" | grep -qF "u"; then
-	UPDATE_ONLY=true
+    UPDATE_ONLY=true
 fi
 
 if echo "$1" | grep -qF "e"; then
-	ERASE=true
+    ERASE=true
 fi
 
 if echo "$1" | grep -qF "s"; then
-	# skip hash
-	FPKG_ARGS="-sbp"
+    # skip hash
+    FPKG_ARGS="-sbp"
 else
-	FPKG_ARGS="-bp"
+    FPKG_ARGS="-bp"
 fi
 
 ### VERIFY ####################################################################
 
 # abort if host is a VM
 if hostnamectl status | grep -q Virt; then
-	echo "This script must be run on a physical machine, not a VM!" >&2
-	exit 1
+    echo "This script must be run on a physical machine, not a VM!" >&2
+    exit 1
 fi
 
 if ! grep -xq Y </sys/module/kvm_intel/parameters/nested; then
-	echo "Nested virtualization is not enabled!" >&2
-	exit 1
+    echo "Nested virtualization is not enabled!" >&2
+    exit 1
 fi
 
 # test if user can become root
 echo "Requires superuser privileges:"
 if ! sudo true "$USER"; then
-	echo 'The user is unable to become root!' >&2
-	exit 1
+    echo 'The user is unable to become root!' >&2
+    exit 1
 fi
 
 ### VARIABLES #################################################################
@@ -71,12 +71,12 @@ NOCOL=$(tput sgr0)
 echo "Variables are:"
 
 if [ "$BP_DIR" = "" ]; then
-	echo "BP_DIR not defined, please use export"
-	exit 1
+    echo "BP_DIR not defined, please use export"
+    exit 1
 fi
 if ! [ -d "$BP_DIR" ]; then
-	echo "BP_DIR not found: $BP_DIR"
-	exit 1
+    echo "BP_DIR not found: $BP_DIR"
+    exit 1
 fi
 echo "BP_DIR $BP_DIR"
 
@@ -116,38 +116,38 @@ echo ""
 ### FUNCTIONS #################################################################
 
 error() {
-	echo "${RED}CinaC Unit Test error: ${NOCOL}$1" >&2
-	exit 1
+    echo "${RED}CinaC Unit Test error: ${NOCOL}$1" >&2
+    exit 1
 }
 
 # as a function
 require_app() {
-	if [ -z "$(command -v "$1")" ]; then
-		error "$1 is not installed. Install to make this program work."
-	fi
+    if [ -z "$(command -v "$1")" ]; then
+        error "$1 is not installed. Install to make this program work."
+    fi
 }
 
 exe() {
-	echo "Run on VM: $1"
-	ww -ft "$VM_NAME" exe -b "$1" || error "ww exe $1"
+    echo "Run on VM: $1"
+    ww -ft "$VM_NAME" exe -b "$1" || error "ww exe $1"
 }
 
 get_section() {
-	# shellcheck disable=SC2039
-	local SECTION
-	SECTION=$(sed 's:#.*$::g' <"$DIR_DEF/bp.ini" |
-		tr '\t' ' ' |
-		sed 's/  */ /g' |
-		tr ' ' '@' |
-		tr '\n' ' ' |
-		sed "s|.*\[$1\]||g" |
-		sed "s|\[.*||g" |
-		awk '{$1=$1;print}')
-	if [ -z "$SECTION" ]; then
-		exit 1
-	else
-		echo "$SECTION"
-	fi
+    # shellcheck disable=SC2039
+    local SECTION
+    SECTION=$(sed 's:#.*$::g' <"$DIR_DEF/bp.ini" |
+        tr '\t' ' ' |
+        sed 's/  */ /g' |
+        tr ' ' '@' |
+        tr '\n' ' ' |
+        sed "s|.*\[$1\]||g" |
+        sed "s|\[.*||g" |
+        awk '{$1=$1;print}')
+    if [ -z "$SECTION" ]; then
+        exit 1
+    else
+        echo "$SECTION"
+    fi
 }
 
 ### MAIN ######################################################################
@@ -161,88 +161,89 @@ require_app rsync
 
 HOST_MEM=$(grep MemTotal </proc/meminfo | awk '{print $2}')
 if [ "$HOST_MEM" -lt 15000000 ]; then
-	error "Your host needs more than 15GB of memory to run this program"
+    error "Your host needs more than 15GB of memory to run this program"
 fi
 
 if [ "$ERASE" ]; then
-	echo "Erasing VM and inventory"
-	sudo vmh env-erase-full "$VM_ENV" || error "vmh env-erase-full"
-	rm -f "$INV_FILE" || error "rm INV_FILE"
-	echo "DONE"
-	exit 0
+    echo "Erasing VM and inventory"
+    sudo vmh env-erase-full "$VM_ENV" || error "vmh env-erase-full"
+    rm -f "$INV_FILE" || error "rm INV_FILE"
+    echo "DONE"
+    exit 0
 fi
 
 if ! [ "$UPDATE_ONLY" ]; then
-	echo "Creating inventory: $INV_FILE"
-	echo "HOSTNAME,OS,USER,PASSWORD,BECOME_METHOD,ORDER" >"$INV_FILE"
-	# shellcheck disable=SC2129
-	echo "" >>"$INV_FILE"
-	echo "$VM_NAME,$VM_SRC,$VM_USER,ansible,sudo,1" >>"$INV_FILE"
-	ww gen || error "ww gen"
-	# add network to VMH
-	echo "Appending $VM_NET to vmh ADMIN_NETWORKS"
-	CURRENT_ADMIN_NETS=$(sudo vmh get ADMIN_NETWORKS)
-	NESTED_NET=$(echo $VM_NET | sed 's/libvirt-net-//g')
-	if ! echo "$CURRENT_ADMIN_NETS" | grep -q "$NESTED_NET"; then
-		sudo vmh set ADMIN_NETWORKS "$CURRENT_ADMIN_NETS $NESTED_NET" ||
-			error "vmh set ADMIN_NETWORKS"
-	fi
+    echo "Creating inventory: $INV_FILE"
+    echo "HOSTNAME,OS,USER,PASSWORD,BECOME_METHOD,ORDER" >"$INV_FILE"
+    # shellcheck disable=SC2129
+    echo "" >>"$INV_FILE"
+    echo "$VM_NAME,$VM_SRC,$VM_USER,ansible,sudo,1" >>"$INV_FILE"
+    ww gen || error "ww gen"
+    # add network to VMH
+    echo "Appending $VM_NET to vmh ADMIN_NETWORKS"
+    CURRENT_ADMIN_NETS=$(sudo vmh get ADMIN_NETWORKS)
+    NESTED_NET=$(echo $VM_NET | sed 's/libvirt-net-//g')
+    if ! echo "$CURRENT_ADMIN_NETS" | grep -q "$NESTED_NET"; then
+        sudo vmh set ADMIN_NETWORKS "$CURRENT_ADMIN_NETS $NESTED_NET" ||
+            error "vmh set ADMIN_NETWORKS"
+    fi
 
-	# download requirements
-	echo "Downloading fastpkg requirements"
-	sudo fastpkg -b update || error "fastpkg update"
-	sudo fastpkg $FPKG_ARGS "$VM_NET $VM_SRC $VM_ISO" install || error "fastpkg download"
-	echo "Creating VM: $VM_NAME"
-	sudo vmh import-chain $VM_NAME $VM_SRC || true
-	echo "Setting VM resources"
-	sudo virsh setmaxmem $VM_NAME 12G --config 1>/dev/null ||
-		error "virsh setmaxmem"
-	sudo virsh setmem $VM_NAME 12G --config 1>/dev/null ||
-		error "virsh setmem"
-	sudo virsh setvcpus $VM_NAME 4 --config --maximum 1>/dev/null ||
-		error "virsh setvcpus"
-	sudo virsh setvcpus $VM_NAME 4 --config 1>/dev/null ||
-		error "virsh setvcpus"
-	echo "Mounting ISO for offline installation"
-	VM_ISO_PATH=$(fastpkg -p $VM_ISO show -d | sed 's/.jigdo//g')
-	if ! [ -f "$VM_ISO_PATH" ]; then
-		error "VM_ISO_PATH not found: $VM_ISO_PATH"
-	fi
-	sudo virsh change-media $VM_NAME sda "$VM_ISO_PATH" 1>/dev/null ||
-		error "virsh change-media"
-	sudo vmh start-wait $VM_NAME ||
-		error "vmh start-wait"
-	ww -ft "$VM_NAME" servermonkey.ww -b setup_generic-offline
-	sshpass -p "$VM_PASS" ssh-copy-id -o StrictHostKeyChecking=no "$SERVER" ||
-		error "ssh-copy-id"
-	exe "apt-get -qy install local-apt-repository rsync"
-	exe "mkdir -p /etc/fastpkg/ $APT_REPO $FPKG_DIR$FPKG_DL"
-	exe "chown -R $VM_USER:$VM_USER $APT_REPO $FPKG_DIR $FPKG_DIR$FPKG_DL $APT_REPO_CFG"
+    # download requirements
+    echo "Downloading fastpkg requirements"
+    sudo fastpkg -b update || error "fastpkg update"
+    sudo fastpkg $FPKG_ARGS "$VM_NET $VM_SRC $VM_ISO" install ||
+        error "fastpkg download"
+    echo "Creating VM: $VM_NAME"
+    sudo vmh import-chain $VM_NAME $VM_SRC || true
+    echo "Setting VM resources"
+    sudo virsh setmaxmem $VM_NAME 12G --config 1>/dev/null ||
+        error "virsh setmaxmem"
+    sudo virsh setmem $VM_NAME 12G --config 1>/dev/null ||
+        error "virsh setmem"
+    sudo virsh setvcpus $VM_NAME 4 --config --maximum 1>/dev/null ||
+        error "virsh setvcpus"
+    sudo virsh setvcpus $VM_NAME 4 --config 1>/dev/null ||
+        error "virsh setvcpus"
+    echo "Mounting ISO for offline installation"
+    VM_ISO_PATH=$(fastpkg -p $VM_ISO show -d | sed 's/.jigdo//g')
+    if ! [ -f "$VM_ISO_PATH" ]; then
+        error "VM_ISO_PATH not found: $VM_ISO_PATH"
+    fi
+    sudo virsh change-media $VM_NAME sda "$VM_ISO_PATH" 1>/dev/null ||
+        error "virsh change-media"
+    sudo vmh start-wait $VM_NAME ||
+        error "vmh start-wait"
+    ww -ft "$VM_NAME" servermonkey.ww -b setup_generic-offline
+    sshpass -p "$VM_PASS" ssh-copy-id -o StrictHostKeyChecking=no "$SERVER" ||
+        error "ssh-copy-id"
+    exe "apt-get -qy install local-apt-repository rsync"
+    exe "mkdir -p /etc/fastpkg/ $APT_REPO $FPKG_DIR$FPKG_DL"
+    exe "chown -R $VM_USER:$VM_USER $APT_REPO $FPKG_DIR $FPKG_DIR$FPKG_DL $APT_REPO_CFG"
 fi
 
 # sync local APT repo
 if [ -d $APT_REPO ]; then
-	echo "Syncing local APT repo to VM"
-	exe "rm -rf /var/lib/apt/lists/_var_lib_local-apt-repository_.*"
-	rsync -a --delete "$APT_REPO" $SERVER:"$APT_REPO"
-	rsync -a --delete "$APT_REPO_CFG" $SERVER:"$APT_REPO_CFG"
+    echo "Syncing local APT repo to VM"
+    exe "rm -rf /var/lib/apt/lists/_var_lib_local-apt-repository_.*"
+    rsync -a --delete "$APT_REPO" $SERVER:"$APT_REPO"
+    rsync -a --delete "$APT_REPO_CFG" $SERVER:"$APT_REPO_CFG"
 else
-	echo "skip sync APT repo, no Local APT repo not found in $APT_REPO"
+    echo "skip sync APT repo, no Local APT repo not found in $APT_REPO"
 fi
 
 # install cinac
 if ! [ "$UPDATE_ONLY" ]; then
-	echo "Installing cinac"
-	exe "apt-get -qqy update"
-	exe "apt-get -qy install cinac"
-	if [ "$AUTOKIOSK" ]; then
-		exe "apt-get -qy install autokiosk"
-	fi
-	if [ "$OFFLINE" ]; then
-		exe "echo offline >$FPKG_CFG"
-	else
-		exe "echo '' >$FPKG_CFG"
-	fi
+    echo "Installing cinac"
+    exe "apt-get -qqy update"
+    exe "apt-get -qy install cinac"
+    if [ "$AUTOKIOSK" ]; then
+        exe "apt-get -qy install autokiosk"
+    fi
+    if [ "$OFFLINE" ]; then
+        exe "echo offline >$FPKG_CFG"
+    else
+        exe "echo '' >$FPKG_CFG"
+    fi
 fi
 
 # download all blueprints fastpkg packages
@@ -253,32 +254,32 @@ echo "$BLUEPRINT_CFGS"
 
 ALL_PKGS=""
 for h in $BLUEPRINT_CFGS; do
-	TO_DL_A=""
-	TO_DL_B=""
-	DIR_DEF=$(dirname "$h")
-	TO_DL_A=$(get_section pkgs-fastpkg-download) || true
-	ALL_PKGS=$(echo "$ALL_PKGS $TO_DL_A" | tr ' ' '\n')
-	TO_DL_B=$(get_section pkgs-fastpkg-install) || true
-	ALL_PKGS=$(echo "$ALL_PKGS $TO_DL_B" | tr ' ' '\n')
-	ALL_PKGS=$(echo "$ALL_PKGS" | sort -u)
+    TO_DL_A=""
+    TO_DL_B=""
+    DIR_DEF=$(dirname "$h")
+    TO_DL_A=$(get_section pkgs-fastpkg-download) || true
+    ALL_PKGS=$(echo "$ALL_PKGS $TO_DL_A" | tr ' ' '\n')
+    TO_DL_B=$(get_section pkgs-fastpkg-install) || true
+    ALL_PKGS=$(echo "$ALL_PKGS $TO_DL_B" | tr ' ' '\n')
+    ALL_PKGS=$(echo "$ALL_PKGS" | sort -u)
 done
 
 for i in $ALL_PKGS; do
-	sudo fastpkg $FPKG_ARGS "$i" download || error "fastpkg download $i"
+    sudo fastpkg $FPKG_ARGS "$i" download || error "fastpkg download $i"
 done
 
 # create a list of fastpkg files to sync
 ALL_FILES=""
 for j in $ALL_PKGS; do
-	FOUND=""
-	FOUND=$(find "$FPKG_DIR$FPKG_DL" -iname "$j*")
-	ALL_FILES=$(echo "$ALL_FILES $FOUND" | tr ' ' '\n')
+    FOUND=""
+    FOUND=$(find "$FPKG_DIR$FPKG_DL" -iname "$j*")
+    ALL_FILES=$(echo "$ALL_FILES $FOUND" | tr ' ' '\n')
 done
 
 echo "Syncing fastpkg repo"
 ALL_FILES=$(echo "$ALL_FILES" | sed '/^ *$/d' | sort -u)
 for k in $ALL_FILES; do
-	rsync -a --info=progress2 "$k" "$SERVER:$k" || error "rsync"
+    rsync -a --info=progress2 "$k" "$SERVER:$k" || error "rsync"
 done
 
 echo "Syncing fastpkg cache"

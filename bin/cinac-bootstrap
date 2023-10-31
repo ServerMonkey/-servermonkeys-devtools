@@ -1,0 +1,145 @@
+#!/bin/sh
+
+# fail on any error
+set -e
+
+# help
+if [ "$1" = "-h" ] || [ "$1" = "--help" ]; then
+    echo "This installs CinaC to a new unconfigured Debian installation."
+    echo "Tested on Debian 11/12"
+    echo ""
+    echo "What it does:"
+    echo " - gather all the required scripts"
+    echo " - run script to configure APT sources.list"
+    echo " - run script to add an APT repo that contains CinaC"
+    echo " - install CinaC unattended"
+    echo ""
+    echo "To run this script in offline mode, run before:"
+    echo "   export CB_OFFLINE=false"
+    echo "To install the full cinac package, run before:"
+    echo "   export CB_PKGS=cinac-full"
+    echo "or another example:"
+    echo "   export CB_PKGS=cinac spice-web-client"
+    echo ""
+    echo "To only download the scripts run:"
+    echo "   ./cinac-bootstrap dl"
+    echo "This will not configure or install anything"
+    echo ""
+    echo "Example online:"
+    echo "Configure cinac-bootstrap.ini"
+    echo "Upload cinac-bootstrap.ini and cinac-bootstrap to a webserver"
+    echo "On your new Debian run:"
+    echo "  wget YOUR_URL/cinac-bootstrap.ini &&"
+    echo "  wget YOUR_URL/cinac-bootstrap | sudo"
+    echo ""
+    echo "Example offline:"
+    echo "Configure cinac-bootstrap.ini"
+    echo "Copy cinac-bootstrap.ini and cinac-bootstrap to a USB-stick"
+    echo "On the stick run:"
+    echo "  ./cinac-bootstrap dl"
+    echo "Move the stick to your new Debian install and run:"
+    echo "  export CB_OFFLINE=true && sudo ./cinac-bootstrap"
+    exit 0
+fi
+
+# get the scripts directory name
+APP_DIR_FULL=$(realpath "$0")
+APP_DIR=$(dirname "$APP_DIR_FULL")
+
+### EXPORT VARIABLES ##########################################################
+
+[ -n "$CB_OFFLINE" ] || CB_OFFLINE="false"
+[ -n "$CB_PKGS" ] || CB_PKGS="cinac"
+
+[ -n "$CINAC_PYARG" ] || export CINAC_PYARG=true
+[ -n "$CINAC_GPGAGENT" ] || export CINAC_GPGAGENT=merge
+[ -n "$CINAC_KEY" ] || export CINAC_KEY=new
+[ -n "$CINAC_MAIL" ] || export CINAC_MAIL=cinac@localhost
+[ -n "$CINAC_NAME" ] || export CINAC_NAME=CinaC
+[ -n "$CINAC_PASSWORD" ] || export CINAC_PASSWORD=none
+
+### STATIC VARIABLES ##########################################################
+
+SCRIPT_APT_CFG="$APP_DIR/cinac-bootstrap_cfg-apt"
+SCRIPT_APT_REPO="$APP_DIR/cinac-bootstrap_add-repo"
+OFFLINE_REPO="$APP_DIR/local-apt-repository"
+LOCAL_REPO="/srv/local-apt-repository"
+
+CFG="$APP_DIR/cinac-bootstrap.ini"
+
+### FUNCTIONS #################################################################
+
+error() {
+    echo "ERROR: $1" >&2
+    exit 1
+}
+
+get_script() {
+    URL=""
+    OUT_FILE=$(basename "$1")
+
+    if [ ! -f "$1" ]; then
+        [ -f "$CFG" ] || error "Missing config file: $CFG"
+
+        URL=$(grep -oP "$2=\K.*" "$CFG")
+        [ -n "$URL" ] || error "Missing $2 variable in $CFG"
+
+        echo "Downloading missing script $OUT_FILE"
+        echo "URL is: $URL"
+        wget -qO "$OUT_FILE" "$URL" ||
+            error "wget failed to download $URL"
+        if [ -f "$OUT_FILE" ]; then
+            chmod +x "$OUT_FILE"
+        else
+            error "Failed to download $URL"
+        fi
+    else
+        echo "Found script $OUT_FILE"
+    fi
+}
+
+### MAIN ######################################################################
+
+get_script "$SCRIPT_APT_CFG" "URL_APT_CFG" || exit 1
+get_script "$SCRIPT_APT_REPO" "URL_APT_REPO" || exit 1
+
+if [ "$1" = "dl" ]; then
+    if [ -d "$LOCAL_REPO" ] && findmnt "$APP_DIR" 1>/dev/null; then
+        echo "Syncing local APT repo to mounted directory"
+        rsync -rtP --delete "$LOCAL_REPO/" "$OFFLINE_REPO" ||
+            error "rsync local apt-repo"
+        echo "Syncing filesystems"
+        sync
+    fi
+    echo "Download only, exiting"
+    exit 0
+fi
+
+if [ "$(id -u)" -ne 0 ]; then
+    echo 'This script must be run as root!' >&2
+    exit 1
+fi
+
+if [ "$CB_OFFLINE" = "true" ]; then
+    echo "Running in offline mode"
+    sh "$SCRIPT_APT_CFG" "offline,cdrom" || error "Script, configure APT"
+    apt-get install -y local-apt-repository rsync ||
+        error "install local-apt-repository"
+    [ -d "$OFFLINE_REPO" ] || error "Missing offline repo: $OFFLINE_REPO"
+    rsync -rtP --delete "$OFFLINE_REPO/" "$LOCAL_REPO" ||
+        error "rsync apt-repo"
+    echo "Syncing filesystems"
+    sync
+else
+    sh "$SCRIPT_APT_CFG" || error "Script, configure APT"
+    sh "$SCRIPT_APT_REPO" || error "Script, add CinaC APT repo"
+fi
+
+echo "Upgrading OS"
+apt-get upgrade -qy || error "Failed to upgrade OS"
+
+echo "Installing CinaC"
+apt-get install "$CB_PKGS" -y || error "Failed to install CinaC"
+
+echo ""
+echo "Installation complete, please run 'cinac-init' and reboot"

@@ -20,6 +20,9 @@ support a '-h' option for additional help.
   to default. Directories: 755, Files: 644
 * `chmod-secret <DIRECTORY>` : Recursively change file and folder permissions
   to secret. Directories: 700, Files: 600
+* `cinac-bootstrap [ -h | dl ]` : Install CinaC to a new unconfigured
+  Debian installation, supports offline installation.
+* `cinac-bootstrap.ini` : Example configuration file for cinac-bootstrap
 * `cinac-unittest <OPTION>` : Create a VM, isntall CinaC and run a test
   blueprint. Useful for developing CinaC blueprints and CinaC itself. Run
   with '-h, --help' for more information.
